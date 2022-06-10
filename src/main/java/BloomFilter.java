@@ -4,12 +4,15 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class BloomFilter<T> {
 
     private byte[] bitMap;
     private int setSize, size;
     private List<MessageDigest> messageDigestList = new ArrayList<MessageDigest>();
+
+    Logger logger = Logger.getLogger(BloomFilter.class.getName());
 
     /* Constructor */
     public BloomFilter(int capacity, List<String> messageDigestList) {
@@ -18,6 +21,7 @@ public class BloomFilter<T> {
         size = 0;
         try {
             if (messageDigestList == null || messageDigestList.isEmpty()) {
+                logger.info("Algorithm list can not be Empty");
                 throw new Exception(" Algorithm list can not be Empty");
             } else {
                 for (String algo : messageDigestList) {
@@ -25,7 +29,8 @@ public class BloomFilter<T> {
                 }
             }
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalArgumentException("Error : MD5 Hash not found");
+            logger.info("Error : Algorithm can not be identified");
+            throw new IllegalArgumentException("Error : Algorithm can not be identified");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -44,7 +49,7 @@ public class BloomFilter<T> {
         return size;
     }
 
-    private int getHash(T value, MessageDigest messageDigest) {
+    private int getIndex(T value, MessageDigest messageDigest) {
         messageDigest.reset();
         byte[] bytes = ByteBuffer.allocate(4).putInt(value.hashCode()).array();
         messageDigest.update(bytes, 0, bytes.length);
@@ -53,26 +58,28 @@ public class BloomFilter<T> {
     }
 
     public void add(T value) {
-        int[] tempSet = getPositivePlacesArray(value);
-        for (int i : tempSet)
+        int[] tempSet = getPositivePlacesInArray(value);
+        for (int i : tempSet) {
             bitMap[i] = 1;
+        }
         size++;
     }
 
     /* Function to check is an object is present */
     public boolean mightContain(T value) {
-        int[] tempSet = getPositivePlacesArray(value);
-        for (int i : tempSet)
+        int[] tempSet = getPositivePlacesInArray(value);
+        for (int i : tempSet) {
             if (bitMap[i] != 1)
                 return false;
+        }
         return true;
     }
 
-    private int[] getPositivePlacesArray(T obj) {
+    private int[] getPositivePlacesInArray(T obj) {
         int[] tempSet = new int[this.messageDigestList.size()];
 
         for (int i = 0; i < messageDigestList.size(); i++) {
-            tempSet[i] = getHash(obj, messageDigestList.get(i));
+            tempSet[i] = getIndex(obj, messageDigestList.get(i));
         }
         return tempSet;
     }
